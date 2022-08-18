@@ -188,7 +188,7 @@ int main(int argc, char * argv[]) try
 
                 // Decimation will reduce the resultion of the depth image,
                 // closing small holes and speeding-up the algorithm
-                data = data.apply_filter(dec);
+                //data = data.apply_filter(dec);
 
                 // To make sure far-away objects are filtered proportionally
                 // we try to switch to disparity domain

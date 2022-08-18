@@ -490,7 +490,7 @@ int main(int argc,char * argv[])
             doorDetect.DrawPred(colori,res,{255,0,0});
                      
             data = data.apply_filter(align_to);
-            auto depth1 = data.get_depth_frame();
+            auto depth1 = data.get_depth_frame();  
             // cout<<"before "<<depth1.get_width()<<endl;
             // cout<<"before "<<depth1.get_height()<<endl;
             //data = data.apply_filter(dec);
@@ -510,7 +510,7 @@ int main(int argc,char * argv[])
             data = data.apply_filter(disparity2depth);
 
             //// Apply color map for visualization of depth
-            data = data.apply_filter(color_map);
+            //data = data.apply_filter(color_map);
 
             // Send resulting frames for visualization in the main thread
 
@@ -522,9 +522,9 @@ int main(int argc,char * argv[])
 
             // get coordinate
             if(!res.empty()){
-            x1 = get_coordinate(depth, app_state1);
-            x2 = get_coordinate(depth, app_state2);
-            x3 = get_coordinate(depth, app_state3);
+            x1 = get_coordinate(depth, app_state1);    //获取到门中心点３D坐标
+            x2 = get_coordinate(depth, app_state2);　　//获取到门中心左侧点３Ｄ坐标　
+            x3 = get_coordinate(depth, app_state3);　　//获取到门中心点右侧３Ｄ坐标
             // cout<<"坐标1为("<<*x1<<","<<*(x1+1)<<","<<*(x1+2)<<")"<<endl ;                
             // cout<<"坐标2为("<<*x2<<","<<*(x2+1)<<","<<*(x2+2)<<")"<<endl ; 
             // cout<<"坐标3为("<<*x3<<","<<*(x3+1)<<","<<*(x3+2)<<")"<<endl ; 
@@ -533,12 +533,12 @@ int main(int argc,char * argv[])
             a_z = *(x3+2) - *(x1+2);
             b_x = *x2 - *x1;
             b_y = *(x2+1) - *(x1+1);
-            b_z = *(x2+2) - *(x1+2);
+            b_z = *(x2+2) - *(x1+2);　　　//计算两个向量
             c_x = a_y*b_z - a_z*b_y;
             c_y = a_z*b_x - a_x*b_z;
-            c_z = a_x*b_y - a_y*b_x;
-            D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));
-            dis = 200*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ;   //距离
+            c_z = a_x*b_y - a_y*b_x;　　　
+            D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));　　//两向量叉积得法向量
+            dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ;   //100代表100cm指门前一米，具体可参见点到平面距离公式
             t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
             t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
             x_1 = *x1 + c_x*t1;
