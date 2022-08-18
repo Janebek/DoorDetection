@@ -14,6 +14,9 @@
 #include <atomic>
 #include <mutex>
 
+#include<iostream>
+using namespace std;
+
 using pixel = std::pair<int, int>;
 
 // Distance 3D is used to calculate real 3D distance between two pixels
@@ -138,10 +141,10 @@ int main(int argc, char * argv[]) try
     rs2::config cfg;
     if (!serial.empty())
         cfg.enable_device(serial);
-    cfg.enable_stream(RS2_STREAM_DEPTH); // Enable default depth
+    cfg.enable_stream(RS2_STREAM_DEPTH,1280,720,RS2_FORMAT_Z16,30); // Enable default depth
     // For the color stream, set format to RGBA
     // To allow blending of the color frame on top of the depth frame
-    cfg.enable_stream(RS2_STREAM_COLOR, RS2_FORMAT_RGBA8);
+    cfg.enable_stream(RS2_STREAM_COLOR,1280,720, RS2_FORMAT_RGBA8,30);
     auto profile = pipe.start(cfg);
 
     auto sensor = profile.get_device().first<rs2::depth_sensor>();
@@ -334,6 +337,7 @@ void render_simple_distance(const rs2::depth_frame& depth,
     auto from_pixel = s.ruler_start.get_pixel(depth);
     auto to_pixel =   s.ruler_end.get_pixel(depth);
     float air_dist = dist_3d(depth, from_pixel, to_pixel);
+    cout<<air_dist*100<<"cm"<<endl;
 
     center.first  = (from_pixel.first + to_pixel.first) / 2;
     center.second = (from_pixel.second + to_pixel.second) / 2;

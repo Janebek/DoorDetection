@@ -437,8 +437,10 @@ int main(int argc,char * argv[])
     rs2::config cfg;
     if (!serial.empty())
         cfg.enable_device(serial);
-    cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
-    cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8, 30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
+    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGBA8, 30);
+    // cfg.enable_stream(RS2_STREAM_DEPTH);
+    // cfg.enable_stream(RS2_STREAM_COLOR, RS2_FORMAT_RGBA8);
     auto profile = pipe.start(cfg);
 
     auto sensor = profile.get_device().first<rs2::depth_sensor>();
@@ -467,7 +469,7 @@ int main(int argc,char * argv[])
             rs2::frame color_frame = data.get_color_frame();
 
             // Creating OpenCV Matrix from a color image
-            Mat colori(Size(640, 480), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
+            Mat colori(Size(1280, 720), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
 
             vector<Output> res = doorDetect.Detect(colori);
             if(!res.empty()){
