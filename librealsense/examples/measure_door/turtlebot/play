@@ -1,0 +1,7 @@
+启动turtlrbot2:
+(cd /home/ivip/sq/bzl/turtlebot2)
+roslaunch kobuki_node minimal.launch
+
+
+cd /home/ivip/sq/bzl/turtlebot2 
+rosrun turtle_move move_turtle
