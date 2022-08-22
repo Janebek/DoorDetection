@@ -483,10 +483,10 @@ int main(int argc,char * argv[])
             vector<Output> res = doorDetect.Detect(colori_resize);
             //vector<Output> res = doorDetect.Detect(colori);
 
-            //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，x坐标乘２，y坐标乘1.5;
+            //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，纵坐标x乘1.5，横坐标y坐标乘２;
             if(!res.empty()){
-                center.x = int(((res[0].box.tl().x + res[0].box.br().x)/2)*2) ;
-                center.y = int(((res[0].box.tl().y + res[0].box.br().y)/2)*1.5) ;
+                center.x = int(((res[0].box.tl().x + res[0].box.br().x)/2)*1.5) ;
+                center.y = int(((res[0].box.tl().y + res[0].box.br().y)/2)*2) ;
                 // center.x = (res[0].box.tl().x + res[0].box.br().x)/2 ;
                 // center.y = (res[0].box.tl().y + res[0].box.br().y)/2 ;
                 a=center.x;
@@ -497,8 +497,8 @@ int main(int argc,char * argv[])
                 f=center.y + 10;
                 g= res[0].box.tl().x * 2;   //创造变量计算门宽
                 h= res[0].box.tl().y * 1.5;
-                l= res[0].box.tl().x * 2;
-                m= res[0].box.br().y * 1.5;
+                l= res[0].box.br().x * 2;
+                m= res[0].box.tl().y * 1.5;
                 cout<<"  "<<endl;
                 app_state1.detect_point={a,b};  
                 app_state2.detect_point={c,d};
@@ -507,6 +507,9 @@ int main(int argc,char * argv[])
                 app_state5.detect_point={l,m};
             }
             
+            // cout<<"tl.x = "<<g<< "  tl.y ="<<h<<endl;
+            // cout<<"tr.x = "<<l<< "  tr.m ="<<h<<endl;
+
             doorDetect.DrawPred(colori_resize,res,{255,0,0});
                      
             data = data.apply_filter(align_to);
@@ -553,73 +556,74 @@ int main(int argc,char * argv[])
             door_width = sqrt(pow(*x4 - *x5, 2.f) +
                              pow(*(x4+1) - *(x5+1), 2.f) +
                              pow(*(x4+2) - *(x5+2), 2.f)) ;
-            cout<<"门宽为"<<door_width<<"cm"<<endl;
-            a_x = *x3 - *x1;
-            a_y = *(x3+1) - *(x1+1);
-            a_z = *(x3+2) - *(x1+2);
-            b_x = *x2 - *x1;
-            b_y = *(x2+1) - *(x1+1);
-            b_z = *(x2+2) - *(x1+2);//计算两个向量
-            c_x = a_y*b_z - a_z*b_y;
-            c_y = a_z*b_x - a_x*b_z;
-            c_z = a_x*b_y - a_y*b_x;
-            D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));//两向量叉积得法向量
-            dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
-            t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
-            t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
-            x_1 = *x1 + c_x*t1;
-            y_1 = *(x1+1) + c_y*t1;
-            z_1 = *(x1+2) + c_z*t1;
-            x_2 = *x1 + c_x*t2;
-            y_2 = *(x1+1) + c_y*t2;
-            z_2 = *(x1+2) + c_z*t2;
-            temp1 = (x_1-*x1)*c_x + (y_1-*(x1+1))*c_y + (z_1-*(x1+2))*c_z; 
-            // temp2 = (x_2-*x1)*c_x + (y_2-*(x1+1))*c_y + (z_2-*(x1+2))*c_z; 
-            if(temp1>0){
-                temp_x_1 = x_1;
-                temp_y_1 = y_1;
-                temp_z_1 = z_1;
-            }
-            else
-            {
-                temp_x_1 = x_2;
-                temp_y_1 = y_2;
-                temp_z_1 = z_2;
-            }
+            cout<<"门宽为"<<door_width<<"cm"<<endl;     //1.门的宽度测量还行，误差大概15%，在真值附近15%跳动，还需增加滤波操作，使其更加稳定
+                                                       //2.还有一个问题是框住门的框不稳定，会来回晃动，这也导致了门宽度测量不稳定
+            // a_x = *x3 - *x1;
+            // a_y = *(x3+1) - *(x1+1);
+            // a_z = *(x3+2) - *(x1+2);
+            // b_x = *x2 - *x1;
+            // b_y = *(x2+1) - *(x1+1);
+            // b_z = *(x2+2) - *(x1+2);//计算两个向量
+            // c_x = a_y*b_z - a_z*b_y;
+            // c_y = a_z*b_x - a_x*b_z;
+            // c_z = a_x*b_y - a_y*b_x;
+            // D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));//两向量叉积得法向量
+            // dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
+            // t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
+            // t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
+            // x_1 = *x1 + c_x*t1;
+            // y_1 = *(x1+1) + c_y*t1;
+            // z_1 = *(x1+2) + c_z*t1;
+            // x_2 = *x1 + c_x*t2;
+            // y_2 = *(x1+1) + c_y*t2;
+            // z_2 = *(x1+2) + c_z*t2;
+            // temp1 = (x_1-*x1)*c_x + (y_1-*(x1+1))*c_y + (z_1-*(x1+2))*c_z; 
+            // // temp2 = (x_2-*x1)*c_x + (y_2-*(x1+1))*c_y + (z_2-*(x1+2))*c_z; 
+            // if(temp1>0){
+            //     temp_x_1 = x_1;
+            //     temp_y_1 = y_1;
+            //     temp_z_1 = z_1;
+            // }
+            // else
+            // {
+            //     temp_x_1 = x_2;
+            //     temp_y_1 = y_2;
+            //     temp_z_1 = z_2;
+            // }
 
-            //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
-            angle_1 = (acos(temp_z_1/sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)))/(2*PI) * 360;
-            if(temp_x_1<0){
-                //cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
-                angle_1_dir=angle_1;
-            }
-            else{
-                //cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
-                angle_1_dir=-angle_1;
-            }
-            juli = sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1);
-            //cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
+            // //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
+            // angle_1 = (acos(temp_z_1/sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)))/(2*PI) * 360;
+            // if(temp_x_1<0){
+            //     //cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
+            //     angle_1_dir=angle_1;
+            // }
+            // else{
+            //     //cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
+            //     angle_1_dir=-angle_1;
+            // }
+            // juli = sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1);
+            // //cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
 
-            temp_x_2 = *x1 - temp_x_1;
-            temp_y_2 = *(x1+1) - temp_y_1;
-            temp_z_2 = *(x1+2) - temp_z_1;
-            angle_2 = (acos((temp_x_2*temp_x_1+temp_z_2*temp_z_1)/(sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)+sqrt(temp_x_2*temp_x_2+temp_y_2*temp_y_2+temp_z_2*temp_z_2))))/(2*PI) * 360;
+            // temp_x_2 = *x1 - temp_x_1;
+            // temp_y_2 = *(x1+1) - temp_y_1;
+            // temp_z_2 = *(x1+2) - temp_z_1;
+            // angle_2 = (acos((temp_x_2*temp_x_1+temp_z_2*temp_z_1)/(sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)+sqrt(temp_x_2*temp_x_2+temp_y_2*temp_y_2+temp_z_2*temp_z_2))))/(2*PI) * 360;
 
-            if(temp_x_1*temp_z_2 - temp_z_1*temp_x_2>0){
-                //cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
-                angle_2_dir=angle_2;
-            }
-            else{
-                //cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
-                angle_2_dir=-angle_2;
-            }
+            // if(temp_x_1*temp_z_2 - temp_z_1*temp_x_2>0){
+            //     //cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
+            //     angle_2_dir=angle_2;
+            // }
+            // else{
+            //     //cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
+            //     angle_2_dir=-angle_2;
+            // }
             
             delete [] x1;
             delete [] x2;
             delete [] x3;
-            // get_coordinate(depth, app_state1);
-            // get_coordinate(depth, app_state2);
-            // get_coordinate(depth, app_state3);
+            delete [] x4;
+            delete [] x5;
+
             }
     }
     });
