@@ -483,7 +483,7 @@ int main(int argc,char * argv[])
             vector<Output> res = doorDetect.Detect(colori_resize);
             //vector<Output> res = doorDetect.Detect(colori);
 
-            //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，纵坐标x乘1.5，横坐标y坐标乘２;
+            //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，纵坐标y乘1.5，横坐标x坐标乘２,横坐标１２８０，纵坐标７２０;
             if(!res.empty()){
                 center.x = int(((res[0].box.tl().x + res[0].box.br().x)/2)*1.5) ;
                 center.y = int(((res[0].box.tl().y + res[0].box.br().y)/2)*2) ;
