@@ -392,8 +392,8 @@ void chatterCallback(const geometry_msgs::PoseArray msg)
 
 int main(int argc,char * argv[])
 {
-    int a,b,c,d,e,f;
-    float *x1,*x2,*x3,*z;
+    int a,b,c,d,e,f,g,h,l,m;
+    float *x1,*x2,*x3,*x4,*x5,*z;
     mutex my_mutex;
     std::string serial;
     if (!device_with_streams({ RS2_STREAM_COLOR,RS2_STREAM_DEPTH }, serial))
@@ -438,7 +438,7 @@ int main(int argc,char * argv[])
     if (!serial.empty())
         cfg.enable_device(serial);
     cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
-    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGBA8, 30);
+    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_BGR8, 30);
     // cfg.enable_stream(RS2_STREAM_DEPTH);
     // cfg.enable_stream(RS2_STREAM_COLOR, RS2_FORMAT_RGBA8);
     auto profile = pipe.start(cfg);
@@ -452,12 +452,13 @@ int main(int argc,char * argv[])
     }
 
     // Define application state and position the ruler buttons
-    state app_state1,app_state2,app_state3; //Pixel 类型
+    state app_state1,app_state2,app_state3,app_state4,app_state5; //Pixel 类型
     center center;
 
     DoorDetect doorDetect = DoorDetect("./model/yolov5nDoorDetectShapeTest.onnx");
 
     float a_x,a_y,a_z,b_x,b_y,b_z,c_x,c_y,c_z,D,dis,t1,t2,x_1,y_1,z_1,x_2,y_2,z_2,temp1,temp2,temp_x_1,temp_y_1,temp_z_1,angle_1,angle_1_dir,angle_2,angle_2_dir,juli,temp_x_2,temp_y_2,temp_z_2;
+    float door_width;
     std::thread coordinate_processing_thread([&]() {
         while (true)
         {
@@ -470,24 +471,43 @@ int main(int argc,char * argv[])
 
             // Creating OpenCV Matrix from a color image
             Mat colori(Size(1280, 720), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
+            // imshow("before",colori);
+            // waitKey(1);
+            //1.将图像分辨率降低至６４０＊４８０，输入ｄｅｔｅｃｔ函数
+            Mat colori_resize;
+            Size dsize = Size(640,480);
+            resize(colori,colori_resize,dsize,0,0,INTER_AREA);
+            // imshow("after",colori_resize);
+            // waitKey(1);
 
-            vector<Output> res = doorDetect.Detect(colori);
+            vector<Output> res = doorDetect.Detect(colori_resize);
+            //vector<Output> res = doorDetect.Detect(colori);
+
+            //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，x坐标乘２，y坐标乘1.5;
             if(!res.empty()){
-                center.x = (res[0].box.tl().x + res[0].box.br().x)/2 ;
-                center.y = (res[0].box.tl().y + res[0].box.br().y)/2 ;
+                center.x = int(((res[0].box.tl().x + res[0].box.br().x)/2)*2) ;
+                center.y = int(((res[0].box.tl().y + res[0].box.br().y)/2)*1.5) ;
+                // center.x = (res[0].box.tl().x + res[0].box.br().x)/2 ;
+                // center.y = (res[0].box.tl().y + res[0].box.br().y)/2 ;
                 a=center.x;
                 b=center.y;
                 c=center.x - 7;
                 d=center.y - 7;
                 e=center.x + 10;
                 f=center.y + 10;
+                g= res[0].box.tl().x * 2;   //创造变量计算门宽
+                h= res[0].box.tl().y * 1.5;
+                l= res[0].box.tl().x * 2;
+                m= res[0].box.br().y * 1.5;
                 cout<<"  "<<endl;
                 app_state1.detect_point={a,b};  
                 app_state2.detect_point={c,d};
-                app_state3.detect_point={e,f};              
+                app_state3.detect_point={e,f};          
+                app_state4.detect_point={g,h};
+                app_state5.detect_point={l,m};
             }
             
-            doorDetect.DrawPred(colori,res,{255,0,0});
+            doorDetect.DrawPred(colori_resize,res,{255,0,0});
                      
             data = data.apply_filter(align_to);
             auto depth1 = data.get_depth_frame();  
@@ -522,23 +542,29 @@ int main(int argc,char * argv[])
 
             // get coordinate
             if(!res.empty()){
-            x1 = get_coordinate(depth, app_state1);    //获取到门中心点３D坐标
-            x2 = get_coordinate(depth, app_state2);　　//获取到门中心左侧点３Ｄ坐标　
-            x3 = get_coordinate(depth, app_state3);　　//获取到门中心点右侧３Ｄ坐标
+            x1 = get_coordinate(depth, app_state1);//获取到门中心点３D坐标
+            x2 = get_coordinate(depth, app_state2);//获取到门中心左侧点３Ｄ坐标　
+            x3 = get_coordinate(depth, app_state3);//获取到门中心点右侧３Ｄ坐标
+            x4 = get_coordinate(depth, app_state4);
+            x5 = get_coordinate(depth, app_state5);
             // cout<<"坐标1为("<<*x1<<","<<*(x1+1)<<","<<*(x1+2)<<")"<<endl ;                
             // cout<<"坐标2为("<<*x2<<","<<*(x2+1)<<","<<*(x2+2)<<")"<<endl ; 
             // cout<<"坐标3为("<<*x3<<","<<*(x3+1)<<","<<*(x3+2)<<")"<<endl ; 
+            door_width = sqrt(pow(*x4 - *x5, 2.f) +
+                             pow(*(x4+1) - *(x5+1), 2.f) +
+                             pow(*(x4+2) - *(x5+2), 2.f)) ;
+            cout<<"门宽为"<<door_width<<"cm"<<endl;
             a_x = *x3 - *x1;
             a_y = *(x3+1) - *(x1+1);
             a_z = *(x3+2) - *(x1+2);
             b_x = *x2 - *x1;
             b_y = *(x2+1) - *(x1+1);
-            b_z = *(x2+2) - *(x1+2);　　　//计算两个向量
+            b_z = *(x2+2) - *(x1+2);//计算两个向量
             c_x = a_y*b_z - a_z*b_y;
             c_y = a_z*b_x - a_x*b_z;
-            c_z = a_x*b_y - a_y*b_x;　　　
-            D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));　　//两向量叉积得法向量
-            dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ;   //100代表100cm指门前一米，具体可参见点到平面距离公式
+            c_z = a_x*b_y - a_y*b_x;
+            D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));//两向量叉积得法向量
+            dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
             t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
             t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
             x_1 = *x1 + c_x*t1;
@@ -561,18 +587,18 @@ int main(int argc,char * argv[])
                 temp_z_1 = z_2;
             }
 
-            cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
+            //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
             angle_1 = (acos(temp_z_1/sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)))/(2*PI) * 360;
             if(temp_x_1<0){
-                cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
+                //cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
                 angle_1_dir=angle_1;
             }
             else{
-                cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
+                //cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
                 angle_1_dir=-angle_1;
             }
             juli = sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1);
-            cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
+            //cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
 
             temp_x_2 = *x1 - temp_x_1;
             temp_y_2 = *(x1+1) - temp_y_1;
@@ -580,11 +606,11 @@ int main(int argc,char * argv[])
             angle_2 = (acos((temp_x_2*temp_x_1+temp_z_2*temp_z_1)/(sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)+sqrt(temp_x_2*temp_x_2+temp_y_2*temp_y_2+temp_z_2*temp_z_2))))/(2*PI) * 360;
 
             if(temp_x_1*temp_z_2 - temp_z_1*temp_x_2>0){
-                cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
+                //cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
                 angle_2_dir=angle_2;
             }
             else{
-                cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
+                //cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
                 angle_2_dir=-angle_2;
             }
             

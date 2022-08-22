@@ -144,7 +144,8 @@ int main(int argc, char * argv[]) try
     cfg.enable_stream(RS2_STREAM_DEPTH,1280,720,RS2_FORMAT_Z16,30); // Enable default depth
     // For the color stream, set format to RGBA
     // To allow blending of the color frame on top of the depth frame
-    cfg.enable_stream(RS2_STREAM_COLOR,1280,720, RS2_FORMAT_RGBA8,30);
+    cfg.enable_stream(RS2_STREAM_COLOR,1280,720, RS2_FORMAT_RGBA8,30);  //RS2_FORMAT_RGBA8 不能改成为opencv准备的RS2_FORMAT_BGR8模式,个人推测可能与opengl显示界面有关系
+    //cfg.enable_stream(RS2_STREAM_COLOR,1280,720, RS2_FORMAT_BGR8,30); 
     auto profile = pipe.start(cfg);
 
     auto sensor = profile.get_device().first<rs2::depth_sensor>();
