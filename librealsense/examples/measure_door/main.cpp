@@ -483,6 +483,19 @@ int main(int argc,char * argv[])
             vector<Output> res = doorDetect.Detect(colori_resize);
             doorDetect.DrawPred(colori_resize,res,{255,0,0});
 
+            /*
+            8.24总结目前滤波算法
+            1.单帧内滤波
+            (1)在一帧内的框内随机选取ran_num组点，这些点之间的关系有条件限制，需要剔除部分点。
+            　　点需要在相对框的第二象限和第四象限，并且都要在框对角线以上的范围内，这能保证法向量朝外。
+            　　算小于ran_num组点的法向量，对这些法向量求平均，算平均方向。
+            一个想法，待定...｛（２）算出平均法向量后，再算平均点，假设深度ｚ值为浮动较大点，将其取平均，赋予中心点的z坐标　｝
+            2.多帧间滤波:
+                利用门前后两点的距离满足一定阈值的条件(180cm，理论值为200cm，即两米)，剔除测量不好的帧，目前用这个办法效果不错。
+
+            目前第二角度还是不太稳，第一个角度和距离还算稳定。
+            */
+
             if(!res.empty()){
 
             vector<int>ran_tl_x;
@@ -686,103 +699,9 @@ int main(int argc,char * argv[])
                 delete [] x2;
                 delete [] x3;
             }
-
-
-
-
-
-
-
-            // x1 = get_coordinate(depth, app_state1);//获取到门中心点３D坐标
-            // x2 = get_coordinate(depth, app_state2);//获取到门中心左侧点３Ｄ坐标　
-            // x3 = get_coordinate(depth, app_state3);//获取到门中心点右侧３Ｄ坐标
-            // x4 = get_coordinate(depth, app_state4);
-            // x5 = get_coordinate(depth, app_state5);
-            // // cout<<"坐标1为("<<*x1<<","<<*(x1+1)<<","<<*(x1+2)<<")"<<endl ;                
-            // // cout<<"坐标2为("<<*x2<<","<<*(x2+1)<<","<<*(x2+2)<<")"<<endl ; 
-            // // cout<<"坐标3为("<<*x3<<","<<*(x3+1)<<","<<*(x3+2)<<")"<<endl ; 
-            // door_width = sqrt(pow(*x4 - *x5, 2.f) +
-            //                  pow(*(x4+1) - *(x5+1), 2.f) +
-            //                  pow(*(x4+2) - *(x5+2), 2.f)) ;
-            // // cout<<"门宽为"<<door_width<<"cm"<<endl;     //1.门的宽度测量还行，误差大概15%，在真值附近15%跳动，还需增加滤波操作，使其更加稳定
-            //                                            //2.还有一个问题是框住门的框不稳定，会来回晃动，这也导致了门宽度测量不稳定
-
-
-            // /*
-            // 开启RANSAC算法
-            // 1.（１）1帧内进行RANSAC:在框内选取100组点（能否自适应，根据离门的远近来调节遍历长度?），算100组点的法向量，对这些法向量求平均，算平均方向。
-            // 　（２）算出平均法向量后，再算平均点，假设深度ｚ值为浮动较大点，将其取平均，赋予中心点的z坐标
-            // 2.多帧之间进行RANSAC:
-            //     待定
-            // */
-            // a_x = *x3 - *x1;
-            // a_y = *(x3+1) - *(x1+1);
-            // a_z = *(x3+2) - *(x1+2);
-            // b_x = *x2 - *x1;
-            // b_y = *(x2+1) - *(x1+1);
-            // b_z = *(x2+2) - *(x1+2);//计算两个向量
-            // c_x = a_y*b_z - a_z*b_y;
-            // c_y = a_z*b_x - a_x*b_z;
-            // c_z = a_x*b_y - a_y*b_x;  //两向量叉积得法向量
-            // D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));
-            // dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
-            // t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
-            // t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
-            // x_1 = *x1 + c_x*t1;
-            // y_1 = *(x1+1) + c_y*t1;
-            // z_1 = *(x1+2) + c_z*t1;
-            // x_2 = *x1 + c_x*t2;
-            // y_2 = *(x1+1) + c_y*t2;
-            // z_2 = *(x1+2) + c_z*t2;
-            // temp1 = (x_1-*x1)*c_x + (y_1-*(x1+1))*c_y + (z_1-*(x1+2))*c_z; 
-            // // temp2 = (x_2-*x1)*c_x + (y_2-*(x1+1))*c_y + (z_2-*(x1+2))*c_z; 
-            // if(temp1>0){
-            //     temp_x_1 = x_1;
-            //     temp_y_1 = y_1;
-            //     temp_z_1 = z_1;
-            // }
-            // else
-            // {
-            //     temp_x_1 = x_2;
-            //     temp_y_1 = y_2;
-            //     temp_z_1 = z_2;
-            // }
-
-            // //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
-            // angle_1 = (acos(temp_z_1/sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)))/(2*PI) * 360;
-            // if(temp_x_1<0){
-            //     //cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
-            //     angle_1_dir=angle_1;
-            // }
-            // else{
-            //     //cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
-            //     angle_1_dir=-angle_1;
-            // }
-            // juli = sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1);
-            // //cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
-
-            // temp_x_2 = *x1 - temp_x_1;
-            // temp_y_2 = *(x1+1) - temp_y_1;
-            // temp_z_2 = *(x1+2) - temp_z_1;
-            // angle_2 = (acos((temp_x_2*temp_x_1+temp_z_2*temp_z_1)/(sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)+sqrt(temp_x_2*temp_x_2+temp_y_2*temp_y_2+temp_z_2*temp_z_2))))/(2*PI) * 360;
-
-            // if(temp_x_1*temp_z_2 - temp_z_1*temp_x_2>0){
-            //     //cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
-            //     angle_2_dir=angle_2;
-            // }
-            // else{
-            //     //cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
-            //     angle_2_dir=-angle_2;
-            // }
             
-            // delete [] x1;
-            // delete [] x2;
-            // delete [] x3;
-            // delete [] x4;
-            // delete [] x5;
+        }
 
-            
-            }
     }
     });
 
