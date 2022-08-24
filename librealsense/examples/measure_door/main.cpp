@@ -481,43 +481,75 @@ int main(int argc,char * argv[])
             // waitKey(1);
 
             vector<Output> res = doorDetect.Detect(colori_resize);
-            //vector<Output> res = doorDetect.Detect(colori);
-
-            //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，纵坐标y乘1.5，横坐标x坐标乘２,横坐标１２８０，纵坐标７２０;
-            if(!res.empty()){
-                center.x = int(((res[0].box.tl().x + res[0].box.br().x)/2)*1.5) ;
-                center.y = int(((res[0].box.tl().y + res[0].box.br().y)/2)*2) ;
-                // center.x = (res[0].box.tl().x + res[0].box.br().x)/2 ;
-                // center.y = (res[0].box.tl().y + res[0].box.br().y)/2 ;
-                a=center.x;
-                b=center.y;
-                c=center.x - 7;
-                d=center.y - 7;
-                e=center.x + 10;
-                f=center.y + 10;
-                g= res[0].box.tl().x * 2;   //创造变量计算门宽
-                h= res[0].box.tl().y * 1.5;
-                l= res[0].box.br().x * 2;
-                m= res[0].box.tl().y * 1.5;
-                cout<<"  "<<endl;
-                app_state1.detect_point={a,b};  
-                app_state2.detect_point={c,d};
-                app_state3.detect_point={e,f};          
-                app_state4.detect_point={g,h};
-                app_state5.detect_point={l,m};
-            }
-            
-            // cout<<"tl.x = "<<g<< "  tl.y ="<<h<<endl;
-            // cout<<"tr.x = "<<l<< "  tr.m ="<<h<<endl;
-
             doorDetect.DrawPred(colori_resize,res,{255,0,0});
+
+            if(!res.empty()){
+
+            vector<int>ran_tl_x;
+            vector<int>ran_tl_y;
+            vector<int>ran_br_x;
+            vector<int>ran_br_y;
+
+            int ran_num=20 ;
+                for(int i=0;i<ran_num;i++)
+                {
+                
+                    //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，纵坐标y乘1.5，横坐标x坐标乘２,横坐标１２８０，纵坐标７２０;
+                    int box_tl_x = (res[0].box.tl().x) * 2 ;
+                    int box_tl_y= (res[0].box.tl().y) *1.5 ;
+                    int box_br_x = (res[0].box.br().x) * 2 ;
+                    int box_br_y = (res[0].box.br().y) * 1.5 ;
+
+                    //开始计算随机数
+                    int min_x_tl = box_tl_x+ 3 ;
+                    int max_x_tl = box_tl_x +1/2*(box_br_x - box_tl_x) -3;
+                    int min_y_tl = box_tl_y + 3 ;
+                    int max_y_tl = box_tl_y +1/2*(box_br_y - box_tl_y) -3;
+                    int min_x_br = box_tl_x +1/2*(box_br_x - box_tl_x) + 3 ;
+                    int max_x_br = box_br_x -3;
+                    int min_y_br = box_tl_y +1/2*(box_br_y - box_tl_y) + 3 ;
+                    int max_y_br = box_br_y -3;
+
+                    int ran_x_tl = min_x_tl + rand() % (max_x_tl - min_x_tl + 1);
+                    int ran_y_tl = min_y_tl + rand() % (max_y_tl - min_y_tl + 1);
+                    int ran_x_br = min_x_br + rand() % (max_x_br - min_x_br + 1);
+                    int ran_y_br = min_y_br + rand() % (max_y_br - min_y_br + 1);
+
+                    ran_tl_x.push_back(ran_x_tl);
+                    ran_tl_y.push_back(ran_y_tl);
+                    ran_br_x.push_back(ran_x_br);
+                    ran_br_y.push_back(ran_y_br);
+
+                    center.x = int((box_tl_x + box_br_x)/2) ;
+                    center.y = int((box_tl_y + box_br_y)/2) ;
+
+                    int vector1_x = ran_x_tl - center.x ;
+                    int vector1_y = ran_y_tl - center.y ;
+                    int vector1_aux_x = 0 ;
+                    int vector1_aux_y = -1;
+
+                    int vector2_x = ran_x_br - box_br_x ;
+                    int vector2_y = ran_y_br - box_br_y ;
+
+                    int vector_main_x = box_tl_x - box_br_x ;
+                    int vector_main_y = box_tl_y - box_br_y ;
+
+                    //将随机数算出的点进行筛选，要留在对角线以上
+                    double seita_main = acos(  (vector_main_x*vector1_aux_x + vector_main_y*vector1_aux_y)  /  ( sqrt(vector_main_x*vector_main_x+vector_main_y*vector_main_y)*sqrt(vector1_aux_x*vector1_aux_x+vector1_aux_y*vector1_aux_y) )     )  ;
+                    double seita_1 = acos(  (vector1_x*vector1_aux_x + vector1_y*vector1_aux_y)  /  ( sqrt(vector1_x*vector1_x+vector1_y*vector1_y)*sqrt(vector1_aux_x*vector1_aux_x+vector1_aux_y*vector1_aux_y) )     )  ;
+                    double seita_2 = acos(  (vector2_x*vector1_aux_x + vector2_y*vector1_aux_y)  /  ( sqrt(vector2_x*vector2_x+vector2_y*vector2_y)*sqrt(vector1_aux_x*vector1_aux_x+vector1_aux_y*vector1_aux_y) )     )  ;
+
+                    if ( seita_1 >= seita_main || seita_2 >= seita_main)
+                    {
+                    ran_tl_x.pop_back();
+                    ran_tl_y.pop_back();
+                    ran_br_x.pop_back();
+                    ran_br_y.pop_back();    //同进同退
+                    }
+                    //至此随机点的筛选完成
+                }
                      
             data = data.apply_filter(align_to);
-            auto depth1 = data.get_depth_frame();  
-            // cout<<"before "<<depth1.get_width()<<endl;
-            // cout<<"before "<<depth1.get_height()<<endl;
-            //data = data.apply_filter(dec);
-
 
             // To make sure far-away objects are filtered proportionally
             // we try to switch to disparity domain
@@ -538,26 +570,151 @@ int main(int argc,char * argv[])
             // Send resulting frames for visualization in the main thread
 
             auto depth = data.get_depth_frame();
-            // cout<<"after"<<depth.get_width()<<endl;
-            // cout<<"after"<<depth.get_height()<<endl;
-            // auto color = data.get_color_frame();
+
+            //开始计算各组点法向量,算出一个平均法向量
+            vector<float>normal_x;
+            vector<float>normal_y;
+            vector<float>normal_z;
 
 
-            // get coordinate
-            if(!res.empty()){
+            app_state1.detect_point={center.x,center.y};
             x1 = get_coordinate(depth, app_state1);//获取到门中心点３D坐标
-            x2 = get_coordinate(depth, app_state2);//获取到门中心左侧点３Ｄ坐标　
-            x3 = get_coordinate(depth, app_state3);//获取到门中心点右侧３Ｄ坐标
-            x4 = get_coordinate(depth, app_state4);
-            x5 = get_coordinate(depth, app_state5);
-            // cout<<"坐标1为("<<*x1<<","<<*(x1+1)<<","<<*(x1+2)<<")"<<endl ;                
-            // cout<<"坐标2为("<<*x2<<","<<*(x2+1)<<","<<*(x2+2)<<")"<<endl ; 
-            // cout<<"坐标3为("<<*x3<<","<<*(x3+1)<<","<<*(x3+2)<<")"<<endl ; 
-            door_width = sqrt(pow(*x4 - *x5, 2.f) +
-                             pow(*(x4+1) - *(x5+1), 2.f) +
-                             pow(*(x4+2) - *(x5+2), 2.f)) ;
-            cout<<"门宽为"<<door_width<<"cm"<<endl;     //1.门的宽度测量还行，误差大概15%，在真值附近15%跳动，还需增加滤波操作，使其更加稳定
-                                                       //2.还有一个问题是框住门的框不稳定，会来回晃动，这也导致了门宽度测量不稳定
+
+            for(int j=0;j<ran_tl_x.size();j++)
+            {
+                //首先获取各点3D坐标
+                app_state2.detect_point={ran_tl_x[j],ran_tl_y[j]};
+                app_state3.detect_point={ran_br_x[j],ran_br_y[j]};
+                
+                x2 = get_coordinate(depth, app_state2);//获取到门中心点左上３Ｄ坐标　
+                x3 = get_coordinate(depth, app_state3);//获取到门中心点右下３Ｄ坐标
+
+                a_x = *x3 - *x1;
+                a_y = *(x3+1) - *(x1+1);
+                a_z = *(x3+2) - *(x1+2);
+                b_x = *x2 - *x1;
+                b_y = *(x2+1) - *(x1+1);
+                b_z = *(x2+2) - *(x1+2);//计算两个向量
+                c_x =  a_y*b_z - a_z*b_y;
+                c_y =  a_z*b_x - a_x*b_z;
+                c_z =  a_x*b_y - a_y*b_x;  //两向量叉积得法向量
+
+                normal_x.push_back(c_x);
+                normal_y.push_back(c_y);
+                normal_z.push_back(c_z);
+            }
+
+            //计算平均法向量
+            float normal_ave_x=0;
+            float normal_ave_y=0;
+            float normal_ave_z=0;
+
+            for(int k=0;k < normal_x.size();k++)
+            {
+                normal_ave_x = normal_ave_x + normal_x[0];
+                normal_ave_y = normal_ave_y + normal_y[0];
+                normal_ave_z = normal_ave_z + normal_z[0];
+            }
+
+            c_x = normal_ave_x/normal_x.size();
+            c_y = normal_ave_y/normal_y.size();
+            c_z = normal_ave_z/normal_z.size();
+
+            //至此平均法向量计算完毕，开始计算平面方程，先试试第一轮滤波效果
+
+            D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2)); //D是平面方程的D,这里的点法式采用的点是中心点，实验证明，该点相当不稳定，这里的点法式可以选取其他点作为代表
+            dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
+            t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
+            t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
+            x_1 = *x1 + c_x*t1;
+            y_1 = *(x1+1) + c_y*t1;
+            z_1 = *(x1+2) + c_z*t1;
+            x_2 = *x1 + c_x*t2;
+            y_2 = *(x1+1) + c_y*t2;
+            z_2 = *(x1+2) + c_z*t2;
+
+            //这里利用计算的两个点作为另一个筛选条件
+            if(abs(z_2-z_1)>180 && z_1>0)
+            {
+                
+                if(z_2>z_1){ //门后的点更深一些
+                    temp_x_1 = x_1;
+                    temp_y_1 = y_1;
+                    temp_z_1 = z_1;
+                }
+                else
+                {
+                    temp_x_1 = x_2;
+                    temp_y_1 = y_2;
+                    temp_z_1 = z_2;
+                }
+
+                //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
+                angle_1 = (acos(temp_z_1/sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)))/(2*PI) * 360;
+                if(temp_x_1<0){
+                    cout<<" "<<endl;
+                    cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
+                    angle_1_dir=angle_1;
+                }
+                else{
+                    cout<<" "<<endl;
+                    cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
+                    angle_1_dir=-angle_1;
+                }
+                juli = sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1);
+                cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
+
+                //第一次旋转角度没问题，行进距离也没问题
+
+                //开始计算第二次角度
+                // !!!这里要特别注意，坐标系是随着小车的运动而变化的，所以所有的坐标都是一开始的坐标系，也即立刻检测到门之后的那个第一个坐标系
+                angle_2 = (acos((temp_x_1*(-c_x)+temp_z_1*(-c_z))/(sqrt(c_x*c_x + c_z*c_z)*sqrt(temp_x_1*temp_x_1+temp_z_1*temp_z_1))))/(2*PI) * 360;
+
+                if(temp_x_1*c_y - temp_z_1*c_x < 0){
+                    cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
+                    angle_2_dir=angle_2;
+                }
+                else{
+                    cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
+                    angle_2_dir=-angle_2;
+                }
+
+                /*至此第二个角度也计算完毕，全部流程结束！
+                个人认为整体逻辑没问题，只不过每一帧各个数值的跳动还是有点大，后续可以想想改进办法。（比四月份的效果好太多）
+                */
+                delete [] x1;
+                delete [] x2;
+                delete [] x3;
+            }
+
+
+
+
+
+
+
+            // x1 = get_coordinate(depth, app_state1);//获取到门中心点３D坐标
+            // x2 = get_coordinate(depth, app_state2);//获取到门中心左侧点３Ｄ坐标　
+            // x3 = get_coordinate(depth, app_state3);//获取到门中心点右侧３Ｄ坐标
+            // x4 = get_coordinate(depth, app_state4);
+            // x5 = get_coordinate(depth, app_state5);
+            // // cout<<"坐标1为("<<*x1<<","<<*(x1+1)<<","<<*(x1+2)<<")"<<endl ;                
+            // // cout<<"坐标2为("<<*x2<<","<<*(x2+1)<<","<<*(x2+2)<<")"<<endl ; 
+            // // cout<<"坐标3为("<<*x3<<","<<*(x3+1)<<","<<*(x3+2)<<")"<<endl ; 
+            // door_width = sqrt(pow(*x4 - *x5, 2.f) +
+            //                  pow(*(x4+1) - *(x5+1), 2.f) +
+            //                  pow(*(x4+2) - *(x5+2), 2.f)) ;
+            // // cout<<"门宽为"<<door_width<<"cm"<<endl;     //1.门的宽度测量还行，误差大概15%，在真值附近15%跳动，还需增加滤波操作，使其更加稳定
+            //                                            //2.还有一个问题是框住门的框不稳定，会来回晃动，这也导致了门宽度测量不稳定
+
+
+            // /*
+            // 开启RANSAC算法
+            // 1.（１）1帧内进行RANSAC:在框内选取100组点（能否自适应，根据离门的远近来调节遍历长度?），算100组点的法向量，对这些法向量求平均，算平均方向。
+            // 　（２）算出平均法向量后，再算平均点，假设深度ｚ值为浮动较大点，将其取平均，赋予中心点的z坐标
+            // 2.多帧之间进行RANSAC:
+            //     待定
+            // */
             // a_x = *x3 - *x1;
             // a_y = *(x3+1) - *(x1+1);
             // a_z = *(x3+2) - *(x1+2);
@@ -566,8 +723,8 @@ int main(int argc,char * argv[])
             // b_z = *(x2+2) - *(x1+2);//计算两个向量
             // c_x = a_y*b_z - a_z*b_y;
             // c_y = a_z*b_x - a_x*b_z;
-            // c_z = a_x*b_y - a_y*b_x;
-            // D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));//两向量叉积得法向量
+            // c_z = a_x*b_y - a_y*b_x;  //两向量叉积得法向量
+            // D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2));
             // dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
             // t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
             // t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
@@ -618,12 +775,13 @@ int main(int argc,char * argv[])
             //     angle_2_dir=-angle_2;
             // }
             
-            delete [] x1;
-            delete [] x2;
-            delete [] x3;
-            delete [] x4;
-            delete [] x5;
+            // delete [] x1;
+            // delete [] x2;
+            // delete [] x3;
+            // delete [] x4;
+            // delete [] x5;
 
+            
             }
     }
     });
