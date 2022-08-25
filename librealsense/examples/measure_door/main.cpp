@@ -665,17 +665,17 @@ int main(int argc,char * argv[])
                 //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
                 angle_1 = (acos(temp_z_1/sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)))/(2*PI) * 360;
                 if(temp_x_1<0){
-                    cout<<" "<<endl;
-                    cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
+                    // cout<<" "<<endl;
+                    // cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
                     angle_1_dir=angle_1;
                 }
                 else{
-                    cout<<" "<<endl;
-                    cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
+                    // cout<<" "<<endl;
+                    // cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
                     angle_1_dir=-angle_1;
                 }
                 juli = sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1);
-                cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
+                // cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
 
                 //第一次旋转角度没问题，行进距离也没问题
 
@@ -684,11 +684,11 @@ int main(int argc,char * argv[])
                 angle_2 = (acos((temp_x_1*(-c_x)+temp_z_1*(-c_z))/(sqrt(c_x*c_x + c_z*c_z)*sqrt(temp_x_1*temp_x_1+temp_z_1*temp_z_1))))/(2*PI) * 360;
 
                 if(temp_x_1*c_y - temp_z_1*c_x < 0){
-                    cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
+                    // cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
                     angle_2_dir=angle_2;
                 }
                 else{
-                    cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
+                    // cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
                     angle_2_dir=-angle_2;
                 }
 
@@ -819,82 +819,89 @@ int main(int argc,char * argv[])
 //     });
 
 
-// std::thread turtlebot([&]() {
-//     std::this_thread::sleep_for (std::chrono::seconds(15));
-// //while(true){
-//    cout<<"this is turtlebot thread!"<<endl;
+std::thread turtlebot([&]() {
+    std::this_thread::sleep_for (std::chrono::seconds(15));
+//while(true){
+   cout<<"this is turtlebot thread!"<<endl;
 
-//   ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
-//   ros::NodeHandle node;//为这个进程的节点创建一个句柄
+  ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
+  ros::NodeHandle node;//为这个进程的节点创建一个句柄
   
-//   cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
-//   ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
-//   signal(SIGINT, shutdown);
+  cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
+  ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
+  signal(SIGINT, shutdown);
   
-//   ROS_INFO("move_turtle_goforward cpp start...");
-//   geometry_msgs::Twist speed; // 控制信号载体 Twist message
-//   double time_1 = getTimeNow();
-//   double time_2 = getTimeNow();
+  ROS_INFO("move_turtle_goforward cpp start...");
+  cout<<" "<<endl;
+  geometry_msgs::Twist speed; // 控制信号载体 Twist message
+  double time_1 = getTimeNow();
+  double time_2 = getTimeNow();
 
-//   float rad_1 = angle_1_dir * PI / 180.0;
-//   float rad_2 = angle_2_dir * PI / 180.0;
-//   float dist = juli;    //单位是cm
+  float rad_1 = angle_1_dir * PI / 180.0;
+  float rad_2 = angle_2_dir * PI / 180.0;
+  float dist = juli;    //单位是cm
 
-//   float interval_1 = rad_1 / 0.5;
-//   float interval_2 = dist * 0.01 / 0.1 ;
-//   float interval_3 = rad_2 / 0.5;
+  cout<<"First Angle is "<<rad_1<<endl;
+  cout<<"Moving Distance is "<<dist<<endl;
+  cout<<"Second Angle is "<<rad_2<<endl;
+  cout<<" "<<endl;
+
+
+  float interval_1 = rad_1 / 0.5;
+  float interval_2 = dist * 0.01 / 0.1 ;
+  float interval_3 = rad_2 / 0.5;
 
 //   cout << "interval_1:" << interval_1 << endl;
 //   cout << "interval_2:" << interval_2 << endl;
 //   cout << "interval_3:" << interval_3 << endl;
 
 
-//   int flag_1 = 10;
-//   int flag_3 = 10;
-//   if(interval_1 < 0){
-//       flag_1 = 0;
-//       interval_1 = abs(interval_1);
-//   }
+  int flag_1 = 10;
+  int flag_3 = 10;
+  if(interval_1 < 0){
+      flag_1 = 0;
+      interval_1 = abs(interval_1);
+  }
 
-//   if(interval_3 < 0){
-//       flag_3 = 0;
-//       interval_3 = abs(interval_3);
-//   }
+  if(interval_3 < 0){
+      flag_3 = 0;
+      interval_3 = abs(interval_3);
+  }
   
-//   while (ros::ok() && time_2-time_1 < interval_1)
-//   {
-//     speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
-//     if(flag_1 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
-//     else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
-//     cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
-//     loopRate.sleep();//休眠直到一个频率周期的时间
-//     time_2 = getTimeNow();
-//   }
-//   //shutdown(1);
-//   time_1 = getTimeNow();
-//   while (ros::ok() && time_2-time_1 < interval_2)
-//   {
-//     speed.linear.x = 0.1; // 设置线速度为0.1m/s，正为前进，负为后退
-//     speed.angular.z = 0; // 设置角速度为0rad/s，正为左转，负为右转
-//     cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
-//     loopRate.sleep();//休眠直到一个频率周期的时间
-//     time_2 = getTimeNow();
-//   }
-//   //shutdown(1);
-//   time_1 = getTimeNow();
-//   while (ros::ok() && time_2-time_1 < interval_3)
-//   {
-//     speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
-//     if(flag_3 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
-//     else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
-//     cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
-//     loopRate.sleep();//休眠直到一个频率周期的时间
-//     time_2 = getTimeNow();
-//   }
-//   shutdown(1);
+  while (ros::ok() && time_2-time_1 < interval_1)
+  {
+    speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
+    if(flag_1 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
+    loopRate.sleep();//休眠直到一个频率周期的时间
+    time_2 = getTimeNow();
+  }
+  //shutdown(1);
+  time_1 = getTimeNow();
+  while (ros::ok() && time_2-time_1 < interval_2)
+  {
+    speed.linear.x = 0.1; // 设置线速度为0.1m/s，正为前进，负为后退
+    speed.angular.z = 0; // 设置角速度为0rad/s，正为左转，负为右转
+    cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
+    loopRate.sleep();//休眠直到一个频率周期的时间
+    time_2 = getTimeNow();
+  }
+  //shutdown(1);
+  time_1 = getTimeNow();
+  while (ros::ok() && time_2-time_1 < interval_3)
+  {
+    speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
+    if(flag_3 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
+    loopRate.sleep();//休眠直到一个频率周期的时间
+    time_2 = getTimeNow();
+  }
+  shutdown(1);
 
-// //}
-//     });
+//}
+    });
 
 
 
