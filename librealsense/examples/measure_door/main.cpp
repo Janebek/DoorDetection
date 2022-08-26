@@ -460,8 +460,12 @@ int main(int argc,char * argv[])
     float a_x,a_y,a_z,b_x,b_y,b_z,c_x,c_y,c_z,D,dis,t1,t2,x_1,y_1,z_1,x_2,y_2,z_2,temp1,temp2,temp_x_1,temp_y_1,temp_z_1,angle_1,angle_1_dir,angle_2,angle_2_dir,juli,temp_x_2,temp_y_2,temp_z_2;
     float door_width;
     std::thread coordinate_processing_thread([&]() {
+
+        unique_lock<mutex> lock(my_mutex);  //锁住线程
+
         while (true)
         {
+            //my_mutex.lock();
 
             rs2::frameset data;
             pipe.poll_for_frames(&data);
@@ -483,6 +487,7 @@ int main(int argc,char * argv[])
             vector<Output> res = doorDetect.Detect(colori_resize);
             doorDetect.DrawPred(colori_resize,res,{255,0,0});
 
+
             /*
             8.24总结目前滤波算法
             1.单帧内滤波
@@ -497,13 +502,18 @@ int main(int argc,char * argv[])
             */
 
             if(!res.empty()){
+                //避免框太靠近边界，导致下面get_coordinate函数计算错误
+                if(res[0].box.tl().x <10 || res[0].box.tl().y <10 || res[0].box.br().x > 630 || res[0].box.br().y > 470 )
+                {
+                    continue;
+                }
 
             vector<int>ran_tl_x;
             vector<int>ran_tl_y;
             vector<int>ran_br_x;
             vector<int>ran_br_y;
 
-            int ran_num=20 ;
+            int ran_num=50 ;
                 for(int i=0;i<ran_num;i++)
                 {
                 
@@ -647,7 +657,7 @@ int main(int argc,char * argv[])
             z_2 = *(x1+2) + c_z*t2;
 
             //这里利用计算的两个点作为另一个筛选条件
-            if(abs(z_2-z_1)>180 && z_1>0)
+            if( abs(z_2-z_1)>190 && z_1>0 && abs(z_2-z_1)<210 )
             {
                 
                 if(z_2>z_1){ //门后的点更深一些
@@ -657,9 +667,7 @@ int main(int argc,char * argv[])
                 }
                 else
                 {
-                    temp_x_1 = x_2;
-                    temp_y_1 = y_2;
-                    temp_z_1 = z_2;
+                    continue;
                 }
 
                 //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
@@ -698,11 +706,18 @@ int main(int argc,char * argv[])
                 delete [] x1;
                 delete [] x2;
                 delete [] x3;
+                // cfg.disable_stream(RS2_STREAM_DEPTH);
+                // cfg.disable_stream(RS2_STREAM_COLOR);
+                pipe.stop();
+                destroyAllWindows();
+                break;
+
             }
             
         }
 
     }
+
     });
 
     // std::thread out([&]() {
@@ -819,9 +834,11 @@ int main(int argc,char * argv[])
 //     });
 
 
-std::thread turtlebot([&]() {
-    std::this_thread::sleep_for (std::chrono::seconds(15));
-//while(true){
+std::thread run_turtlebot([&]() {
+
+    unique_lock<mutex> lock(my_mutex);
+    //std::this_thread::sleep_for (std::chrono::seconds(5));
+
    cout<<"this is turtlebot thread!"<<endl;
 
   ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
@@ -832,7 +849,7 @@ std::thread turtlebot([&]() {
   signal(SIGINT, shutdown);
   
   ROS_INFO("move_turtle_goforward cpp start...");
-  cout<<" "<<endl;
+
   geometry_msgs::Twist speed; // 控制信号载体 Twist message
   double time_1 = getTimeNow();
   double time_2 = getTimeNow();
@@ -841,6 +858,7 @@ std::thread turtlebot([&]() {
   float rad_2 = angle_2_dir * PI / 180.0;
   float dist = juli;    //单位是cm
 
+  cout<<" "<<endl;
   cout<<"First Angle is "<<rad_1<<endl;
   cout<<"Moving Distance is "<<dist<<endl;
   cout<<"Second Angle is "<<rad_2<<endl;
@@ -900,7 +918,6 @@ std::thread turtlebot([&]() {
   }
   shutdown(1);
 
-//}
     });
 
 
@@ -931,25 +948,12 @@ std::thread turtlebot([&]() {
 
 
 
+    coordinate_processing_thread.join();
+    run_turtlebot.join();
 
-
-
-
-
-    while(true){
-        for(int i=0;i<1000;i++){
-            if(i=999){
-    // cout<<"目标点的坐标("<<*z<<","<<*(z+1)<<","<<*(z+2)<<")"<<endl ;
-        i=0;
-            }
-        }
-    }
-
-    //video_processing_thread.join();
 
     return EXIT_SUCCESS;
 
-    // return 0;
 } 
 
 
