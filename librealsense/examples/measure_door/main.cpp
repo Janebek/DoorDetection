@@ -43,10 +43,6 @@ using namespace std;
 using namespace cv;
 
 
-
-
-
-
 struct Output {
 	int id;  //结果类别id
 	double confidence;  //结果置信度
@@ -97,37 +93,6 @@ float * compute_coordinate(const rs2::depth_frame& frame, pixel u)
    
 }
 
-// void compute_coordinate(const rs2::depth_frame& frame, pixel u)
-// {
-//     float upixel[2]; // From pixel
-//     float upoint[3]; // From point (in 3D)
-
-//     // Copy pixels into the arrays (to match rsutil signatures)
-//     upixel[0] = u.first;
-//     upixel[1] = u.second;
-
-//     float udist = frame.get_distance(upixel[0], upixel[1]);
-
-//     rs2_intrinsics intr = frame.get_profile().as<rs2::video_stream_profile>().get_intrinsics(); // Calibration data
-
-//     rs2_deproject_pixel_to_point(upoint, &intr, upixel, udist);
-
-//     cout<<"坐标为："<<"("<<upoint[0]*100<<","<<upoint[1]*100<<","<<upoint[2]*100<<")"<<endl;;
-
-   
-// }
-
-// void get_coordinate(const rs2::depth_frame& depth,
-//                             const state& s)
-// {
-
-//     pixel from_pixel = {s.detect_point.x,s.detect_point.y};
-
-//     compute_coordinate(depth, from_pixel);
-
-   
-
-// }
 
 class DoorDetect{
 public:
@@ -465,8 +430,6 @@ int main(int argc,char * argv[])
 
         while (true)
         {
-            //my_mutex.lock();
-
             rs2::frameset data;
             pipe.poll_for_frames(&data);
 
@@ -514,6 +477,7 @@ int main(int argc,char * argv[])
             vector<int>ran_br_y;
 
             int ran_num=50 ;
+            int shrink_num=30; //更朝里一些
                 for(int i=0;i<ran_num;i++)
                 {
                 
@@ -524,14 +488,14 @@ int main(int argc,char * argv[])
                     int box_br_y = (res[0].box.br().y) * 1.5 ;
 
                     //开始计算随机数
-                    int min_x_tl = box_tl_x+ 3 ;
-                    int max_x_tl = box_tl_x +1/2*(box_br_x - box_tl_x) -3;
-                    int min_y_tl = box_tl_y + 3 ;
-                    int max_y_tl = box_tl_y +1/2*(box_br_y - box_tl_y) -3;
-                    int min_x_br = box_tl_x +1/2*(box_br_x - box_tl_x) + 3 ;
-                    int max_x_br = box_br_x -3;
-                    int min_y_br = box_tl_y +1/2*(box_br_y - box_tl_y) + 3 ;
-                    int max_y_br = box_br_y -3;
+                    int min_x_tl = box_tl_x+ shrink_num ;
+                    int max_x_tl = box_tl_x +1/2*(box_br_x - box_tl_x) -shrink_num;
+                    int min_y_tl = box_tl_y + shrink_num ;
+                    int max_y_tl = box_tl_y +1/2*(box_br_y - box_tl_y) -shrink_num;
+                    int min_x_br = box_tl_x +1/2*(box_br_x - box_tl_x) + shrink_num ;
+                    int max_x_br = box_br_x -shrink_num;
+                    int min_y_br = box_tl_y +1/2*(box_br_y - box_tl_y) + shrink_num ;
+                    int max_y_br = box_br_y -shrink_num;
 
                     int ran_x_tl = min_x_tl + rand() % (max_x_tl - min_x_tl + 1);
                     int ran_y_tl = min_y_tl + rand() % (max_y_tl - min_y_tl + 1);
@@ -599,9 +563,30 @@ int main(int argc,char * argv[])
             vector<float>normal_y;
             vector<float>normal_z;
 
+            vector<float>center_z;
 
             app_state1.detect_point={center.x,center.y};
             x1 = get_coordinate(depth, app_state1);//获取到门中心点３D坐标
+            //这里为了对中心点进行滤波操作，使其的ｚ向量更加平均,将之前获得获得到的随机点的ｚ坐标平均
+            for(int k=0;k<ran_tl_x.size();k++)
+            {
+                app_state4.detect_point={ran_tl_x[k],ran_tl_y[k]};
+                app_state5.detect_point={ran_br_x[k],ran_br_y[k]};
+                
+                x4 = get_coordinate(depth,app_state4);
+                x5 = get_coordinate(depth,app_state5);
+
+                center_z.push_back(*(x4+2));
+                center_z.push_back(*(x5+2));
+            }
+
+            float center_z_ave=0 ;
+            for(int k=0;k<center_z.size();k++)
+            {
+                center_z_ave = center_z_ave + center_z[k];
+            }
+
+            *(x1+2) = center_z_ave/center_z.size();
 
             for(int j=0;j<ran_tl_x.size();j++)
             {
@@ -839,84 +824,94 @@ std::thread run_turtlebot([&]() {
     unique_lock<mutex> lock(my_mutex);
     //std::this_thread::sleep_for (std::chrono::seconds(5));
 
-   cout<<"this is turtlebot thread!"<<endl;
+    //cout<<"this is turtlebot thread!"<<endl;
 
-  ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
-  ros::NodeHandle node;//为这个进程的节点创建一个句柄
-  
-  cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
-  ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
-  signal(SIGINT, shutdown);
-  
-  ROS_INFO("move_turtle_goforward cpp start...");
+    float rad_1 = angle_1_dir * PI / 180.0;
+    float rad_2 = angle_2_dir * PI / 180.0;
+    float dist = juli;    //单位是cm
 
-  geometry_msgs::Twist speed; // 控制信号载体 Twist message
-  double time_1 = getTimeNow();
-  double time_2 = getTimeNow();
+    cout<<" "<<endl;
+    cout<<"First Angle is "<<rad_1<<endl;
+    cout<<"Moving Distance is "<<dist<<endl;
+    cout<<"Second Angle is "<<rad_2<<endl;
+    cout<<" "<<endl;
 
-  float rad_1 = angle_1_dir * PI / 180.0;
-  float rad_2 = angle_2_dir * PI / 180.0;
-  float dist = juli;    //单位是cm
+    ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
+    ros::NodeHandle node;//为这个进程的节点创建一个句柄
 
-  cout<<" "<<endl;
-  cout<<"First Angle is "<<rad_1<<endl;
-  cout<<"Moving Distance is "<<dist<<endl;
-  cout<<"Second Angle is "<<rad_2<<endl;
-  cout<<" "<<endl;
+    cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
+    ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
+    signal(SIGINT, shutdown);
+
+    ROS_INFO("move_turtle_goforward cpp start...");
+
+    geometry_msgs::Twist speed; // 控制信号载体 Twist message
+    double time_1 = getTimeNow();
+    double time_2 = getTimeNow();
+
+    //   float rad_1 = angle_1_dir * PI / 180.0;
+    //   float rad_2 = angle_2_dir * PI / 180.0;
+    //   float dist = juli;    //单位是cm
+
+    //   cout<<" "<<endl;
+    //   cout<<"First Angle is "<<rad_1<<endl;
+    //   cout<<"Moving Distance is "<<dist<<endl;
+    //   cout<<"Second Angle is "<<rad_2<<endl;
+    //   cout<<" "<<endl;
 
 
-  float interval_1 = rad_1 / 0.5;
-  float interval_2 = dist * 0.01 / 0.1 ;
-  float interval_3 = rad_2 / 0.5;
+    float interval_1 = rad_1 / 0.5;
+    float interval_2 = dist * 0.01 / 0.1 ;
+    float interval_3 = rad_2 / 0.5;
 
-//   cout << "interval_1:" << interval_1 << endl;
-//   cout << "interval_2:" << interval_2 << endl;
-//   cout << "interval_3:" << interval_3 << endl;
+    //   cout << "interval_1:" << interval_1 << endl;
+    //   cout << "interval_2:" << interval_2 << endl;
+    //   cout << "interval_3:" << interval_3 << endl;
 
 
-  int flag_1 = 10;
-  int flag_3 = 10;
-  if(interval_1 < 0){
-      flag_1 = 0;
-      interval_1 = abs(interval_1);
-  }
+    int flag_1 = 10;
+    int flag_3 = 10;
+    if(interval_1 < 0){
+        flag_1 = 0;
+        interval_1 = abs(interval_1);
+    }
 
-  if(interval_3 < 0){
-      flag_3 = 0;
-      interval_3 = abs(interval_3);
-  }
-  
-  while (ros::ok() && time_2-time_1 < interval_1)
-  {
+    if(interval_3 < 0){
+        flag_3 = 0;
+        interval_3 = abs(interval_3);
+    }
+
+    while (ros::ok() && time_2-time_1 < interval_1)
+    {
     speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
     if(flag_1 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
     else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
     cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
     loopRate.sleep();//休眠直到一个频率周期的时间
     time_2 = getTimeNow();
-  }
-  //shutdown(1);
-  time_1 = getTimeNow();
-  while (ros::ok() && time_2-time_1 < interval_2)
-  {
+    }
+    //shutdown(1);
+    time_1 = getTimeNow();
+    while (ros::ok() && time_2-time_1 < interval_2)
+    {
     speed.linear.x = 0.1; // 设置线速度为0.1m/s，正为前进，负为后退
     speed.angular.z = 0; // 设置角速度为0rad/s，正为左转，负为右转
     cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
     loopRate.sleep();//休眠直到一个频率周期的时间
     time_2 = getTimeNow();
-  }
-  //shutdown(1);
-  time_1 = getTimeNow();
-  while (ros::ok() && time_2-time_1 < interval_3)
-  {
+    }
+    //shutdown(1);
+    time_1 = getTimeNow();
+    while (ros::ok() && time_2-time_1 < interval_3)
+    {
     speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
     if(flag_3 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
     else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
     cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
     loopRate.sleep();//休眠直到一个频率周期的时间
     time_2 = getTimeNow();
-  }
-  shutdown(1);
+    }
+    shutdown(1);
 
     });
 
