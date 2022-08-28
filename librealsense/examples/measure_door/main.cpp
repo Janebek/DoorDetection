@@ -980,7 +980,7 @@ std::thread run_turtlebot_first([&]() {
 
             if(!res.empty()){
                 //避免框太靠近边界，导致下面get_coordinate函数计算错误
-                if(res[0].box.tl().x <10 || res[0].box.tl().y <10 || res[0].box.br().x > 630 || res[0].box.br().y > 470 )
+                if(res[0].box.tl().x <50 || res[0].box.tl().y <10 || res[0].box.br().x > 590 || res[0].box.br().y > 470 )
                 {
                     continue;
                 }
