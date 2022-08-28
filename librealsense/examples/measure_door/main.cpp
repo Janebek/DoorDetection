@@ -358,7 +358,20 @@ void chatterCallback(const geometry_msgs::PoseArray msg)
 int main(int argc,char * argv[])
 {
     int a,b,c,d,e,f,g,h,l,m;
-    float *x1,*x2,*x3,*x4,*x5,*z;
+    float *x1,*x2,*x3,*x4,*x5,*z,*x6,*x7,*x8,*x9,*x10;
+    
+    ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
+    ros::NodeHandle node;//为这个进程的节点创建一个句柄
+
+    cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
+    ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
+    signal(SIGINT, shutdown);
+
+    //ROS_INFO("move_turtle_goforward cpp start...");
+
+    geometry_msgs::Twist speed; // 控制信号载体 Twist message
+
+
     mutex my_mutex;
     std::string serial;
     if (!device_with_streams({ RS2_STREAM_COLOR,RS2_STREAM_DEPTH }, serial))
@@ -424,10 +437,11 @@ int main(int argc,char * argv[])
 
     float a_x,a_y,a_z,b_x,b_y,b_z,c_x,c_y,c_z,D,dis,t1,t2,x_1,y_1,z_1,x_2,y_2,z_2,temp1,temp2,temp_x_1,temp_y_1,temp_z_1,angle_1,angle_1_dir,angle_2,angle_2_dir,juli,temp_x_2,temp_y_2,temp_z_2;
     float door_width;
-    std::thread coordinate_processing_thread([&]() {
+    std::thread coordinate_processing_thread_first([&]() {
 
         unique_lock<mutex> lock(my_mutex);  //锁住线程
 
+        cout<<"first"<<endl;
         while (true)
         {
             rs2::frameset data;
@@ -631,7 +645,7 @@ int main(int argc,char * argv[])
             //至此平均法向量计算完毕，开始计算平面方程，先试试第一轮滤波效果
 
             D = -c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2)); //D是平面方程的D,这里的点法式采用的点是中心点，实验证明，该点相当不稳定，这里的点法式可以选取其他点作为代表
-            dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
+            dis = 250*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
             t1 = (dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
             t2 = (-dis-c_x*(*x1)-c_y*(*(x1+1))-c_z*(*(x1+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
             x_1 = *x1 + c_x*t1;
@@ -642,7 +656,7 @@ int main(int argc,char * argv[])
             z_2 = *(x1+2) + c_z*t2;
 
             //这里利用计算的两个点作为另一个筛选条件
-            if( abs(z_2-z_1)>190 && z_1>0 && abs(z_2-z_1)<210 )
+            if( abs(z_2-z_1)>490 && z_1>0 && abs(z_2-z_1)<510 )
             {
                 
                 if(z_2>z_1){ //门后的点更深一些
@@ -691,6 +705,8 @@ int main(int argc,char * argv[])
                 delete [] x1;
                 delete [] x2;
                 delete [] x3;
+                delete [] x4;
+                delete [] x5;
                 // cfg.disable_stream(RS2_STREAM_DEPTH);
                 // cfg.disable_stream(RS2_STREAM_COLOR);
                 pipe.stop();
@@ -704,6 +720,9 @@ int main(int argc,char * argv[])
     }
 
     });
+
+
+
 
     // std::thread out([&]() {
     // while(true){
@@ -819,10 +838,11 @@ int main(int argc,char * argv[])
 //     });
 
 
-std::thread run_turtlebot([&]() {
+std::thread run_turtlebot_first([&]() {
 
+    std::this_thread::sleep_for (std::chrono::seconds(1));
     unique_lock<mutex> lock(my_mutex);
-    //std::this_thread::sleep_for (std::chrono::seconds(5));
+
 
     //cout<<"this is turtlebot thread!"<<endl;
 
@@ -831,21 +851,21 @@ std::thread run_turtlebot([&]() {
     float dist = juli;    //单位是cm
 
     cout<<" "<<endl;
-    cout<<"First Angle is "<<rad_1<<endl;
-    cout<<"Moving Distance is "<<dist<<endl;
-    cout<<"Second Angle is "<<rad_2<<endl;
+    cout<<"first: First Angle is "<<rad_1<<endl;
+    cout<<"first: Moving Distance is "<<dist<<endl;
+    cout<<"first: Second Angle is "<<rad_2<<endl;
     cout<<" "<<endl;
 
-    ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
-    ros::NodeHandle node;//为这个进程的节点创建一个句柄
+    // ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
+    // ros::NodeHandle node;//为这个进程的节点创建一个句柄
 
-    cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
-    ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
-    signal(SIGINT, shutdown);
+    // cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
+    // ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
+    // signal(SIGINT, shutdown);
 
-    ROS_INFO("move_turtle_goforward cpp start...");
+    // ROS_INFO("move_turtle_goforward cpp start...");
 
-    geometry_msgs::Twist speed; // 控制信号载体 Twist message
+    // geometry_msgs::Twist speed; // 控制信号载体 Twist message
     double time_1 = getTimeNow();
     double time_2 = getTimeNow();
 
@@ -861,7 +881,7 @@ std::thread run_turtlebot([&]() {
 
 
     float interval_1 = rad_1 / 0.5;
-    float interval_2 = dist * 0.01 / 0.1 ;
+    float interval_2 = dist * 0.01 / 0.15 ;
     float interval_3 = rad_2 / 0.5;
 
     //   cout << "interval_1:" << interval_1 << endl;
@@ -894,7 +914,399 @@ std::thread run_turtlebot([&]() {
     time_1 = getTimeNow();
     while (ros::ok() && time_2-time_1 < interval_2)
     {
-    speed.linear.x = 0.1; // 设置线速度为0.1m/s，正为前进，负为后退
+    speed.linear.x = 0.15; // 设置线速度为0.1m/s，正为前进，负为后退
+    speed.angular.z = 0; // 设置角速度为0rad/s，正为左转，负为右转
+    cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
+    loopRate.sleep();//休眠直到一个频率周期的时间
+    time_2 = getTimeNow();
+    }
+    //shutdown(1);
+    time_1 = getTimeNow();
+    while (ros::ok() && time_2-time_1 < interval_3)
+    {
+    speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
+    // if(flag_3 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    // else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    if(flag_3 == 0) speed.angular.z = 0; // 设置角速度为0rad/s，正为左转，负为右转
+    else speed.angular.z = 0; // 设置角速度为0rad/s，正为左转，负为右转
+    cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
+    loopRate.sleep();//休眠直到一个频率周期的时间
+    time_2 = getTimeNow();
+    }
+    //shutdown(1);
+
+    });
+
+
+
+
+
+
+    std::thread coordinate_processing_thread_second([&]() {
+
+        std::this_thread::sleep_for (std::chrono::seconds(1));
+        unique_lock<mutex> lock(my_mutex);  //锁住线程
+        cout<<"second"<<endl;
+        auto profile = pipe.start(cfg);
+
+        auto sensor = profile.get_device().first<rs2::depth_sensor>();
+
+        // Set the device to High Accuracy preset of the D400 stereoscopic cameras
+        if (sensor && sensor.is<rs2::depth_stereo_sensor>())
+        {
+            sensor.set_option(RS2_OPTION_VISUAL_PRESET, RS2_RS400_VISUAL_PRESET_HIGH_ACCURACY);
+        }
+        while (true)
+        {
+            rs2::frameset data;
+            pipe.poll_for_frames(&data);
+
+            //Get each frame
+            rs2::frame color_frame = data.get_color_frame();
+
+            // Creating OpenCV Matrix from a color image
+            Mat colori(Size(1280, 720), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
+            // imshow("before",colori);
+            // waitKey(1);
+            //1.将图像分辨率降低至６４０＊４８０，输入ｄｅｔｅｃｔ函数
+            Mat colori_resize;
+            Size dsize = Size(640,480);
+            resize(colori,colori_resize,dsize,0,0,INTER_AREA);
+            // imshow("after",colori_resize);
+            // waitKey(1);
+
+            vector<Output> res = doorDetect.Detect(colori_resize);
+            doorDetect.DrawPred(colori_resize,res,{255,0,0});
+
+            if(!res.empty()){
+                //避免框太靠近边界，导致下面get_coordinate函数计算错误
+                if(res[0].box.tl().x <10 || res[0].box.tl().y <10 || res[0].box.br().x > 630 || res[0].box.br().y > 470 )
+                {
+                    continue;
+                }
+
+            vector<int>ran_tl_x;
+            vector<int>ran_tl_y;
+            vector<int>ran_br_x;
+            vector<int>ran_br_y;
+
+            int ran_num=50 ;
+            int shrink_num=30; //更朝里一些
+                for(int i=0;i<ran_num;i++)
+                {
+                
+                    //2.将６４０＊４８０中的坐标位置放大，乘一个缩放系数，纵坐标y乘1.5，横坐标x坐标乘２,横坐标１２８０，纵坐标７２０;
+                    int box_tl_x = (res[0].box.tl().x) * 2 ;
+                    int box_tl_y= (res[0].box.tl().y) *1.5 ;
+                    int box_br_x = (res[0].box.br().x) * 2 ;
+                    int box_br_y = (res[0].box.br().y) * 1.5 ;
+
+                    //开始计算随机数
+                    int min_x_tl = box_tl_x+ shrink_num ;
+                    int max_x_tl = box_tl_x +1/2*(box_br_x - box_tl_x) -shrink_num;
+                    int min_y_tl = box_tl_y + shrink_num ;
+                    int max_y_tl = box_tl_y +1/2*(box_br_y - box_tl_y) -shrink_num;
+                    int min_x_br = box_tl_x +1/2*(box_br_x - box_tl_x) + shrink_num ;
+                    int max_x_br = box_br_x -shrink_num;
+                    int min_y_br = box_tl_y +1/2*(box_br_y - box_tl_y) + shrink_num ;
+                    int max_y_br = box_br_y -shrink_num;
+
+                    int ran_x_tl = min_x_tl + rand() % (max_x_tl - min_x_tl + 1);
+                    int ran_y_tl = min_y_tl + rand() % (max_y_tl - min_y_tl + 1);
+                    int ran_x_br = min_x_br + rand() % (max_x_br - min_x_br + 1);
+                    int ran_y_br = min_y_br + rand() % (max_y_br - min_y_br + 1);
+
+                    ran_tl_x.push_back(ran_x_tl);
+                    ran_tl_y.push_back(ran_y_tl);
+                    ran_br_x.push_back(ran_x_br);
+                    ran_br_y.push_back(ran_y_br);
+
+                    center.x = int((box_tl_x + box_br_x)/2) ;
+                    center.y = int((box_tl_y + box_br_y)/2) ;
+
+                    int vector1_x = ran_x_tl - center.x ;
+                    int vector1_y = ran_y_tl - center.y ;
+                    int vector1_aux_x = 0 ;
+                    int vector1_aux_y = -1;
+
+                    int vector2_x = ran_x_br - box_br_x ;
+                    int vector2_y = ran_y_br - box_br_y ;
+
+                    int vector_main_x = box_tl_x - box_br_x ;
+                    int vector_main_y = box_tl_y - box_br_y ;
+
+                    //将随机数算出的点进行筛选，要留在对角线以上
+                    double seita_main = acos(  (vector_main_x*vector1_aux_x + vector_main_y*vector1_aux_y)  /  ( sqrt(vector_main_x*vector_main_x+vector_main_y*vector_main_y)*sqrt(vector1_aux_x*vector1_aux_x+vector1_aux_y*vector1_aux_y) )     )  ;
+                    double seita_1 = acos(  (vector1_x*vector1_aux_x + vector1_y*vector1_aux_y)  /  ( sqrt(vector1_x*vector1_x+vector1_y*vector1_y)*sqrt(vector1_aux_x*vector1_aux_x+vector1_aux_y*vector1_aux_y) )     )  ;
+                    double seita_2 = acos(  (vector2_x*vector1_aux_x + vector2_y*vector1_aux_y)  /  ( sqrt(vector2_x*vector2_x+vector2_y*vector2_y)*sqrt(vector1_aux_x*vector1_aux_x+vector1_aux_y*vector1_aux_y) )     )  ;
+
+                    if ( seita_1 >= seita_main || seita_2 >= seita_main)
+                    {
+                    ran_tl_x.pop_back();
+                    ran_tl_y.pop_back();
+                    ran_br_x.pop_back();
+                    ran_br_y.pop_back();    //同进同退
+                    }
+                    //至此随机点的筛选完成
+                }
+                     
+            data = data.apply_filter(align_to);
+
+            // To make sure far-away objects are filtered proportionally
+            // we try to switch to disparity domain
+            data = data.apply_filter(depth2disparity);
+
+            // Apply spatial filtering
+            data = data.apply_filter(spat);
+
+            // Apply temporal filtering
+            data = data.apply_filter(temp);
+
+            // If we are in disparity domain, switch back to depth
+            data = data.apply_filter(disparity2depth);
+
+            //// Apply color map for visualization of depth
+            //data = data.apply_filter(color_map);
+
+            // Send resulting frames for visualization in the main thread
+
+            auto depth = data.get_depth_frame();
+
+            //开始计算各组点法向量,算出一个平均法向量
+            vector<float>normal_x;
+            vector<float>normal_y;
+            vector<float>normal_z;
+
+            vector<float>center_z;
+
+            app_state1.detect_point={center.x,center.y};
+            x6 = get_coordinate(depth, app_state1);//获取到门中心点３D坐标
+            //这里为了对中心点进行滤波操作，使其的ｚ向量更加平均,将之前获得获得到的随机点的ｚ坐标平均
+            for(int k=0;k<ran_tl_x.size();k++)
+            {
+                app_state4.detect_point={ran_tl_x[k],ran_tl_y[k]};
+                app_state5.detect_point={ran_br_x[k],ran_br_y[k]};
+                
+                x9 = get_coordinate(depth,app_state4);
+                x10 = get_coordinate(depth,app_state5);
+
+                center_z.push_back(*(x9+2));
+                center_z.push_back(*(x10+2));
+            }
+
+            float center_z_ave=0 ;
+            for(int k=0;k<center_z.size();k++)
+            {
+                center_z_ave = center_z_ave + center_z[k];
+            }
+
+            *(x6+2) = center_z_ave/center_z.size();
+
+            for(int j=0;j<ran_tl_x.size();j++)
+            {
+                //首先获取各点3D坐标
+                app_state2.detect_point={ran_tl_x[j],ran_tl_y[j]};
+                app_state3.detect_point={ran_br_x[j],ran_br_y[j]};
+                
+                x7 = get_coordinate(depth, app_state2);//获取到门中心点左上３Ｄ坐标　
+                x8 = get_coordinate(depth, app_state3);//获取到门中心点右下３Ｄ坐标
+
+                a_x = *x8 - *x6;
+                a_y = *(x8+1) - *(x6+1);
+                a_z = *(x8+2) - *(x6+2);
+                b_x = *x7 - *x6;
+                b_y = *(x7+1) - *(x6+1);
+                b_z = *(x7+2) - *(x6+2);//计算两个向量
+                c_x =  a_y*b_z - a_z*b_y;
+                c_y =  a_z*b_x - a_x*b_z;
+                c_z =  a_x*b_y - a_y*b_x;  //两向量叉积得法向量
+
+                normal_x.push_back(c_x);
+                normal_y.push_back(c_y);
+                normal_z.push_back(c_z);
+            }
+
+            //计算平均法向量
+            float normal_ave_x=0;
+            float normal_ave_y=0;
+            float normal_ave_z=0;
+
+            for(int k=0;k < normal_x.size();k++)
+            {
+                normal_ave_x = normal_ave_x + normal_x[0];
+                normal_ave_y = normal_ave_y + normal_y[0];
+                normal_ave_z = normal_ave_z + normal_z[0];
+            }
+
+            c_x = normal_ave_x/normal_x.size();
+            c_y = normal_ave_y/normal_y.size();
+            c_z = normal_ave_z/normal_z.size();
+
+            //至此平均法向量计算完毕，开始计算平面方程，先试试第一轮滤波效果
+
+            D = -c_x*(*x6)-c_y*(*(x6+1))-c_z*(*(x6+2)); //D是平面方程的D,这里的点法式采用的点是中心点，实验证明，该点相当不稳定，这里的点法式可以选取其他点作为代表
+            dis = 100*sqrt(c_x*c_x+c_y*c_y+c_z*c_z) ; //100代表100cm指门前一米，具体可参见点到平面距离公式
+            t1 = (dis-c_x*(*x6)-c_y*(*(x6+1))-c_z*(*(x6+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
+            t2 = (-dis-c_x*(*x6)-c_y*(*(x6+1))-c_z*(*(x6+2))-D)/(c_x*c_x+c_y*c_y+c_z*c_z) ;
+            x_1 = *x6 + c_x*t1;
+            y_1 = *(x6+1) + c_y*t1;
+            z_1 = *(x6+2) + c_z*t1;
+            x_2 = *x6 + c_x*t2;
+            y_2 = *(x6+1) + c_y*t2;
+            z_2 = *(x6+2) + c_z*t2;
+
+
+            //这里利用计算的两个点作为另一个筛选条件
+            if( abs(z_2-z_1)>195 && z_1>0 && abs(z_2-z_1)<210 )
+            {
+                
+                if(z_2>z_1){ //门后的点更深一些
+                    temp_x_1 = x_1;
+                    temp_y_1 = y_1;
+                    temp_z_1 = z_1;
+                }
+                else
+                {
+                    continue;
+                }
+
+                //cout<<"門前一米处坐标为 ("<<temp_x_1<<","<<0<<","<<temp_z_1<<")"<<endl;
+                angle_1 = (acos(temp_z_1/sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1)))/(2*PI) * 360;
+                if(temp_x_1<0){
+                    // cout<<" "<<endl;
+                    // cout<<"小车第一次需要逆时针旋转"<<angle_1<<"度"<<endl;
+                    angle_1_dir=angle_1;
+                }
+                else{
+                    // cout<<" "<<endl;
+                    // cout<<"小车第一次需要顺时针旋转"<<angle_1<<"度"<<endl;
+                    angle_1_dir=-angle_1;
+                }
+                juli = sqrt(temp_x_1*temp_x_1 + temp_z_1*temp_z_1);
+                // cout<<"小车需要行进的距离为"<<juli<<"cm"<<endl;
+
+                //第一次旋转角度没问题，行进距离也没问题
+
+                //开始计算第二次角度
+                // !!!这里要特别注意，坐标系是随着小车的运动而变化的，所以所有的坐标都是一开始的坐标系，也即立刻检测到门之后的那个第一个坐标系
+                angle_2 = (acos((temp_x_1*(-c_x)+temp_z_1*(-c_z))/(sqrt(c_x*c_x + c_z*c_z)*sqrt(temp_x_1*temp_x_1+temp_z_1*temp_z_1))))/(2*PI) * 360;
+
+                if(temp_x_1*c_y - temp_z_1*c_x < 0){
+                    // cout<<"小车第二次需要逆时针旋转"<<angle_2<<"度"<<endl;
+                    angle_2_dir=angle_2;
+                }
+                else{
+                    // cout<<"小车第二次需要顺时针旋转"<<angle_2<<"度"<<endl;
+                    angle_2_dir=-angle_2;
+                }
+
+                /*至此第二个角度也计算完毕，全部流程结束！
+                个人认为整体逻辑没问题，只不过每一帧各个数值的跳动还是有点大，后续可以想想改进办法。（比四月份的效果好太多）
+                */
+                delete [] x6;
+                delete [] x7;
+                delete [] x8;
+                delete [] x9;
+                delete [] x10;
+
+                // cfg.disable_stream(RS2_STREAM_DEPTH);
+                // cfg.disable_stream(RS2_STREAM_COLOR);
+                pipe.stop();
+                destroyAllWindows();
+                break;
+
+            }
+            
+        }
+
+    }
+
+    });
+
+
+
+
+
+
+
+
+std::thread run_turtlebot_second([&]() {
+
+    std::this_thread::sleep_for (std::chrono::seconds(1));
+    unique_lock<mutex> lock(my_mutex);
+
+
+    //cout<<"this is turtlebot thread!"<<endl;
+
+    float rad_1 = angle_1_dir * PI / 180.0;
+    float rad_2 = angle_2_dir * PI / 180.0;
+    float dist = juli;    //单位是cm
+
+    cout<<" "<<endl;
+    cout<<"second: First Angle is "<<rad_1<<endl;
+    cout<<"second: Moving Distance is "<<dist<<endl;
+    cout<<"second: Second Angle is "<<rad_2<<endl;
+    cout<<" "<<endl;
+
+    // ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
+    // ros::NodeHandle node;//为这个进程的节点创建一个句柄
+
+    // cmdVelPub = node.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);//在/mobile_base/commands/velocity topic上发布一个geometry_msgs/Twist的消息
+    // ros::Rate loopRate(10);//ros::Rate对象可以允许你指定自循环的频率
+    // signal(SIGINT, shutdown);
+
+    // ROS_INFO("move_turtle_goforward cpp start...");
+
+    // geometry_msgs::Twist speed; // 控制信号载体 Twist message
+    double time_1 = getTimeNow();
+    double time_2 = getTimeNow();
+
+    //   float rad_1 = angle_1_dir * PI / 180.0;
+    //   float rad_2 = angle_2_dir * PI / 180.0;
+    //   float dist = juli;    //单位是cm
+
+    //   cout<<" "<<endl;
+    //   cout<<"First Angle is "<<rad_1<<endl;
+    //   cout<<"Moving Distance is "<<dist<<endl;
+    //   cout<<"Second Angle is "<<rad_2<<endl;
+    //   cout<<" "<<endl;
+
+
+    float interval_1 = rad_1 / 0.5;
+    float interval_2 = dist * 0.01 / 0.15 ;
+    float interval_3 = rad_2 / 0.5;
+
+    //   cout << "interval_1:" << interval_1 << endl;
+    //   cout << "interval_2:" << interval_2 << endl;
+    //   cout << "interval_3:" << interval_3 << endl;
+
+
+    int flag_1 = 10;
+    int flag_3 = 10;
+    if(interval_1 < 0){
+        flag_1 = 0;
+        interval_1 = abs(interval_1);
+    }
+
+    if(interval_3 < 0){
+        flag_3 = 0;
+        interval_3 = abs(interval_3);
+    }
+
+    while (ros::ok() && time_2-time_1 < interval_1)
+    {
+    speed.linear.x = 0; // 设置线速度为0.1m/s，正为前进，负为后退
+    if(flag_1 == 0) speed.angular.z = -0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    else speed.angular.z = 0.5; // 设置角速度为0rad/s，正为左转，负为右转
+    cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
+    loopRate.sleep();//休眠直到一个频率周期的时间
+    time_2 = getTimeNow();
+    }
+    //shutdown(1);
+    time_1 = getTimeNow();
+    while (ros::ok() && time_2-time_1 < interval_2)
+    {
+    speed.linear.x = 0.15; // 设置线速度为0.1m/s，正为前进，负为后退
     speed.angular.z = 0; // 设置角速度为0rad/s，正为左转，负为右转
     cmdVelPub.publish(speed); // 将刚才设置的指令发送给机器人
     loopRate.sleep();//休眠直到一个频率周期的时间
@@ -911,11 +1323,10 @@ std::thread run_turtlebot([&]() {
     loopRate.sleep();//休眠直到一个频率周期的时间
     time_2 = getTimeNow();
     }
+        //cout<<"boom"<<endl;
     shutdown(1);
 
     });
-
-
 
 //通信测试
 // std::thread turtlebot([&]() {
@@ -943,8 +1354,10 @@ std::thread run_turtlebot([&]() {
 
 
 
-    coordinate_processing_thread.join();
-    run_turtlebot.join();
+    coordinate_processing_thread_first.join();
+    run_turtlebot_first.join();
+    coordinate_processing_thread_second.join();
+    run_turtlebot_second.join();
 
 
     return EXIT_SUCCESS;
