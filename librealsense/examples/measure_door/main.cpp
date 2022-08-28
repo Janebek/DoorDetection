@@ -36,6 +36,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <condition_variable>
+
 
 #define  PI 3.1415926
 
@@ -360,6 +362,11 @@ int main(int argc,char * argv[])
     int a,b,c,d,e,f,g,h,l,m;
     float *x1,*x2,*x3,*x4,*x5,*z,*x6,*x7,*x8,*x9,*x10;
     
+    std::condition_variable cond1,cond2,cond3;
+    bool ready1 = false;
+    bool ready2 = false;
+    bool ready3 = false;
+
     ros::init(argc, argv, "move_turtle_goforward");//初始化ROS,它允许ROS通过命令行进行名称重映射
     ros::NodeHandle node;//为这个进程的节点创建一个句柄
 
@@ -711,6 +718,8 @@ int main(int argc,char * argv[])
                 // cfg.disable_stream(RS2_STREAM_COLOR);
                 pipe.stop();
                 destroyAllWindows();
+                ready1 = true;
+                cond1.notify_all();
                 break;
 
             }
@@ -840,8 +849,11 @@ int main(int argc,char * argv[])
 
 std::thread run_turtlebot_first([&]() {
 
-    std::this_thread::sleep_for (std::chrono::seconds(1));
+    //std::this_thread::sleep_for (std::chrono::seconds(1));
+
     unique_lock<mutex> lock(my_mutex);
+    while(!ready1)
+        cond1.wait(lock) ;
 
 
     //cout<<"this is turtlebot thread!"<<endl;
@@ -933,6 +945,8 @@ std::thread run_turtlebot_first([&]() {
     loopRate.sleep();//休眠直到一个频率周期的时间
     time_2 = getTimeNow();
     }
+    ready2=true;
+    cond2.notify_all();
     //shutdown(1);
 
     });
@@ -944,8 +958,11 @@ std::thread run_turtlebot_first([&]() {
 
     std::thread coordinate_processing_thread_second([&]() {
 
-        std::this_thread::sleep_for (std::chrono::seconds(1));
+        //std::this_thread::sleep_for (std::chrono::seconds(1));
         unique_lock<mutex> lock(my_mutex);  //锁住线程
+
+        while(!ready2)
+            cond2.wait(lock) ;
         cout<<"second"<<endl;
         auto profile = pipe.start(cfg);
 
@@ -1213,8 +1230,9 @@ std::thread run_turtlebot_first([&]() {
                 // cfg.disable_stream(RS2_STREAM_COLOR);
                 pipe.stop();
                 destroyAllWindows();
+                ready3 = true;
+                cond3.notify_all();
                 break;
-
             }
             
         }
@@ -1232,9 +1250,10 @@ std::thread run_turtlebot_first([&]() {
 
 std::thread run_turtlebot_second([&]() {
 
-    std::this_thread::sleep_for (std::chrono::seconds(1));
+    //std::this_thread::sleep_for (std::chrono::seconds(1));
     unique_lock<mutex> lock(my_mutex);
-
+    while(!ready3)
+        cond3.wait(lock) ;
 
     //cout<<"this is turtlebot thread!"<<endl;
 
