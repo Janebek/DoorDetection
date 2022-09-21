@@ -14,4 +14,6 @@ debug ok
 system's roughly frame is done, it combines two steps. First is roughly estimate the corrdinate, give it 1 angle(first) and 1 moving distance. Second is accurate estimate(within 3m), give it 2 angles(fist&second) and 1 moving distance.
 Fixed thread competition.
 
+roslaunch turtlebot_bringup minimal.launch then ./home/ivip/Janebek/DoorDetection/librealsense/build/devel/lib/RealsenseExamplesMeasure/main
+
 
